@@ -49,9 +49,15 @@ export default function App() {
     (async () => {
       const p = await meuPerfil();
       setPerfil(p);
-      if (p) {
-        const { data } = await listarClientes();
-        setClientes(data || []);
+      if (p && !p.semPerfil) {
+        // Admin enxerga todos os condomínios; demais, só os vinculados.
+        // Sem vínculo = usuário independente: casos ficam Interno/Externo.
+        if (p.papel === "admin") {
+          const { data } = await listarClientes();
+          setClientes(data || []);
+        } else {
+          setClientes(p.clientes || []);
+        }
       }
       setCarregando(false);
     })();
@@ -118,8 +124,9 @@ export default function App() {
         >
           <Row last>
             <div style={{ fontSize: 16, lineHeight: 1.5, color: "var(--label2)" }}>
-              Avise o administrador que sua conta ({perfil.email || "sua conta"}) precisa ser
-              vinculada a um condomínio.
+              {perfil.desativado
+                ? `O acesso de ${perfil.email || "sua conta"} foi desativado pelo administrador.`
+                : `Avise o administrador que a conta ${perfil.email || "sua conta"} precisa ser liberada no painel de usuários.`}
             </div>
           </Row>
         </Group>
