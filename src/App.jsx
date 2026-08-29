@@ -326,6 +326,33 @@ export default function App() {
                   })}
                 </Group>
               )}
+
+              <Group
+                header="Conta"
+                footer={
+                  perfil.papel === "admin"
+                    ? "Administrador · acesso a todos os clientes"
+                    : perfil.papel === "gestor"
+                    ? `Gestor · ${perfil.clientes.map((c) => c.nome).join(", ") || "sem cliente"}`
+                    : perfil.clientes.map((c) => c.nome).join(", ") || "sem cliente vinculado"
+                }
+              >
+                <Row>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 17 }}>{perfil.nome}</span>
+                    <span style={{ fontSize: 15, color: "var(--label3)" }}>
+                      {perfil.papel === "admin"
+                        ? "Administrador"
+                        : perfil.papel === "gestor"
+                        ? "Gestor"
+                        : "Decisor"}
+                    </span>
+                  </div>
+                </Row>
+                <Row last onClick={sair}>
+                  <span style={{ fontSize: 17, color: "var(--red)" }}>Sair da conta</span>
+                </Row>
+              </Group>
             </>
           )}
         </main>
