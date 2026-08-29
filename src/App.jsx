@@ -35,6 +35,7 @@ export default function App() {
   const [clientes, setClientes] = useState([]);
   const [tela, setTela] = useState("casos"); // casos | jornada | painel
   const [erro, setErro] = useState(null);
+  const [aviso, setAviso] = useState(null);
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -105,8 +106,17 @@ export default function App() {
 
   const acaoAdmin = async (casoId, acao) => {
     const { error } = await classificarCaso(casoId, acao);
-    if (error) setErro(error.message);
-    else carregarCasos();
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setErro(null);
+    setAviso(
+      acao === "descartar"
+        ? "Caso descartado. Sai dos indicadores e não pode ser retentado."
+        : "Nova tentativa solicitada. O decisor verá o aviso em Meus casos."
+    );
+    carregarCasos();
   };
 
   // ——— Carregando ———
@@ -233,6 +243,11 @@ export default function App() {
       ) : (
         <main style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px 120px" }}>
           {erro && <Aviso onClick={() => setErro(null)}>{erro}</Aviso>}
+          {aviso && (
+            <Aviso tipo="ok" onClick={() => setAviso(null)}>
+              {aviso}
+            </Aviso>
+          )}
 
           {/* ——— PAINEL ——— */}
           {tela === "painel" && (
@@ -310,16 +325,16 @@ export default function App() {
               )}
 
               <Group
-                header={`Fila de decisão · ${lista.filter((c) => c.estado === "nao_resolvido").length}`}
+                header={`Fila de decisão · ${lista.filter((c) => c.estado === "nao_resolvido" && !c.descartado).length}`}
                 footer="Casos não resolvidos aguardam sua decisão: retentar devolve ao decisor, descartar encerra e impede nova tentativa."
               >
-                {lista.filter((c) => c.estado === "nao_resolvido").length === 0 ? (
+                {lista.filter((c) => c.estado === "nao_resolvido" && !c.descartado).length === 0 ? (
                   <Row last>
                     <span style={{ fontSize: 15, color: "var(--label3)" }}>Nenhum caso na fila.</span>
                   </Row>
                 ) : (
                   lista
-                    .filter((c) => c.estado === "nao_resolvido")
+                    .filter((c) => c.estado === "nao_resolvido" && !c.descartado)
                     .map((c, i, arr) => (
                       <Row key={c.id} last={i === arr.length - 1}>
                         <div style={{ fontSize: 13, color: "var(--label3)", marginBottom: 5 }}>
@@ -329,12 +344,18 @@ export default function App() {
                           {(c.relato_confirmado || "").slice(0, 150)}
                         </div>
                         <div style={{ display: "flex", gap: 18 }}>
-                          <button
-                            onClick={() => acaoAdmin(c.id, "retentar")}
-                            style={{ background: "none", border: "none", color: "var(--blue)", fontSize: 15, fontWeight: 500, padding: 0, cursor: "pointer" }}
-                          >
-                            Retentar
-                          </button>
+                          {c.retentativaPendente ? (
+                            <span style={{ fontSize: 15, color: "var(--label3)" }}>
+                              Nova tentativa solicitada
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => acaoAdmin(c.id, "retentar")}
+                              style={{ background: "none", border: "none", color: "var(--blue)", fontSize: 15, fontWeight: 500, padding: 0, cursor: "pointer" }}
+                            >
+                              Retentar
+                            </button>
+                          )}
                           <button
                             onClick={() => acaoAdmin(c.id, "descartar")}
                             style={{ background: "none", border: "none", color: "var(--red)", fontSize: 15, fontWeight: 500, padding: 0, cursor: "pointer" }}
@@ -378,6 +399,27 @@ export default function App() {
                         <div style={{ fontSize: 15, lineHeight: 1.42 }}>
                           {(c.relato_confirmado || "").slice(0, 130)}
                         </div>
+                        {c.retentativaPendente && (
+                          <div style={{ marginTop: 10 }}>
+                            <button
+                              onClick={() => {
+                                setCasoPai(c);
+                                setTela("jornada");
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "var(--red)",
+                                fontSize: 15,
+                                fontWeight: 600,
+                                padding: 0,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Iniciar nova tentativa (solicitada pelo gestor)
+                            </button>
+                          </div>
+                        )}
                       </Row>
                     );
                   })}
