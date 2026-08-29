@@ -178,21 +178,44 @@ const CAMPOS_CASO = `
   acoes(ordem, descricao, responsavel, data_limite, evidencia_esperada)
 `;
 
+/** Junta os casos com a situação administrativa (descartado / retentativa pendente). */
+async function comSituacao(query) {
+  const { data, error } = await query;
+  if (error || !data?.length) return { data: data || [], error };
+
+  const { data: sit } = await supabase
+    .from("casos_situacao")
+    .select("id, descartado, retentativa_pendente, ultima_acao")
+    .in("id", data.map((c) => c.id));
+
+  const mapa = Object.fromEntries((sit || []).map((s) => [s.id, s]));
+  return {
+    data: data.map((c) => ({
+      ...c,
+      descartado: mapa[c.id]?.descartado || false,
+      retentativaPendente: mapa[c.id]?.retentativa_pendente || false,
+    })),
+    error: null,
+  };
+}
+
 export const meusCasos = async () => {
   const { data: sess } = await supabase.auth.getSession();
-  return supabase
-    .from("casos")
-    .select(CAMPOS_CASO)
-    .eq("autor_id", sess.session.user.id)
-    .eq("arquivado", false)
-    .order("criado_em", { ascending: false });
+  return comSituacao(
+    supabase
+      .from("casos")
+      .select(CAMPOS_CASO)
+      .eq("autor_id", sess.session.user.id)
+      .eq("arquivado", false)
+      .order("criado_em", { ascending: false })
+  );
 };
 
 /** Admin vê a organização; gestor só os clientes vinculados. O filtro real está no RLS. */
 export const casosDoPainel = (clienteId = null) => {
   let q = supabase.from("casos").select(CAMPOS_CASO).eq("arquivado", false);
   if (clienteId) q = q.eq("cliente_id", clienteId);
-  return q.order("criado_em", { ascending: false });
+  return comSituacao(q.order("criado_em", { ascending: false }));
 };
 
 export const casosMensuraveis = (clienteId = null) => {
@@ -218,7 +241,9 @@ export const classificacoesDe = (casoIds) =>
     .in("caso_id", casoIds);
 
 // ————— Métricas (regra §6: descartados fora do cálculo) —————
-export function calcularMetricas(casos) {
+export function calcularMetricas(casosBrutos) {
+  // Descartados saem de todos os indicadores (regras-negocio.md §6)
+  const casos = casosBrutos.filter((c) => !c.descartado);
   const total = casos.length;
   const por = (e) => casos.filter((c) => c.estado === e).length;
   const resolvidos = por("resolvido");
