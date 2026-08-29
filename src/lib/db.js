@@ -13,7 +13,16 @@ export const sair = () => supabase.auth.signOut();
 
 export const sessaoAtual = () => supabase.auth.getSession();
 
-/** Perfil do usuário logado + clientes vinculados. RLS garante o escopo. */
+/**
+ * Perfil do usuário logado + clientes vinculados. RLS garante o escopo.
+ * Retorna:
+ *   { ...perfil }        → acesso liberado
+ *   { semPerfil: true }  → autenticado, mas sem cadastro liberado pelo admin
+ *   null                 → sem sessão
+ *
+ * maybeSingle() em vez de single(): sem perfil o PostgREST devolveria 406,
+ * que o app tratava como falha genérica e deixava o usuário sem explicação.
+ */
 export async function meuPerfil() {
   const { data: sess } = await supabase.auth.getSession();
   if (!sess?.session) return null;
@@ -22,9 +31,11 @@ export async function meuPerfil() {
     .from("perfis")
     .select("id, nome, papel, ativo, equipe_id, equipes(nome), perfis_clientes(cliente_id, clientes(id, nome))")
     .eq("id", sess.session.user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data || !data.ativo) return null;
+  if (error) return { semPerfil: true, motivo: error.message };
+  if (!data) return { semPerfil: true, email: sess.session.user.email };
+  if (!data.ativo) return { semPerfil: true, desativado: true, email: sess.session.user.email };
 
   return {
     id: data.id,
