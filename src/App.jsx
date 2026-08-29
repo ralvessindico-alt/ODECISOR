@@ -105,6 +105,30 @@ export default function App() {
   // ——— Carregando ———
   if (carregando) return <div style={{ padding: 40, color: "var(--label3)" }}>Carregando…</div>;
 
+  // ——— Autenticado, mas sem cadastro liberado ———
+  if (perfil?.semPerfil)
+    return (
+      <div style={{ padding: "60px 16px", maxWidth: 420, margin: "0 auto" }}>
+        <Titulo sub="Seu login funcionou, mas o acesso ainda não foi liberado pelo administrador.">
+          Quase lá
+        </Titulo>
+        <Group
+          header="O que fazer"
+          footer={perfil.desativado ? "Este acesso está desativado." : undefined}
+        >
+          <Row last>
+            <div style={{ fontSize: 16, lineHeight: 1.5, color: "var(--label2)" }}>
+              Avise o administrador que sua conta ({perfil.email || "sua conta"}) precisa ser
+              vinculada a um condomínio.
+            </div>
+          </Row>
+        </Group>
+        <Pill variant="plain" onClick={sair}>
+          Sair
+        </Pill>
+      </div>
+    );
+
   // ——— Login ———
   if (!perfil)
     return (
@@ -222,6 +246,7 @@ export default function App() {
                 </div>
               )}
 
+              {perfil.papel === "admin" && (
               <Group header="Leitura do painel" footer="A IA traduz os números e aponta a ação prioritária.">
                 <Row last={!leitura} onClick={lendo ? undefined : lerPainel}>
                   <span style={{ fontSize: 17, color: lendo ? "var(--label3)" : "var(--blue)" }}>
@@ -242,15 +267,20 @@ export default function App() {
                   </Row>
                 )}
               </Group>
+              )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 26 }}>
-                <Metrica rotulo="Casos" valor={metricas.total} cor="var(--label)" />
-                <Metrica rotulo="Resolvidos" valor={`${metricas.taxaResolucao}%`} cor="var(--green)" />
-                <Metrica rotulo="Responderam" valor={`${metricas.taxaResposta}%`} cor="var(--blue)" />
-                <Metrica rotulo="Não resolvidos" valor={metricas.naoResolvidos} cor="var(--red)" />
-                <Metrica rotulo="Abertas" valor={metricas.abertas} cor="var(--blue)" />
-                <Metrica rotulo="Expirados" valor={metricas.expirados} cor="var(--label3)" />
-              </div>
+              {/* Indicadores de desempenho: exclusivos do administrador.
+                  Gestor (inclusive síndico) enxerga apenas a fila dos seus clientes. */}
+              {perfil.papel === "admin" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 26 }}>
+                  <Metrica rotulo="Casos" valor={metricas.total} cor="var(--label)" />
+                  <Metrica rotulo="Resolvidos" valor={`${metricas.taxaResolucao}%`} cor="var(--green)" />
+                  <Metrica rotulo="Responderam" valor={`${metricas.taxaResposta}%`} cor="var(--blue)" />
+                  <Metrica rotulo="Não resolvidos" valor={metricas.naoResolvidos} cor="var(--red)" />
+                  <Metrica rotulo="Abertas" valor={metricas.abertas} cor="var(--blue)" />
+                  <Metrica rotulo="Expirados" valor={metricas.expirados} cor="var(--label3)" />
+                </div>
+              )}
 
               <Group
                 header={`Fila de decisão · ${lista.filter((c) => c.estado === "nao_resolvido").length}`}
