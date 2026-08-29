@@ -27,6 +27,7 @@ import {
   horasRestantes,
 } from "./components/ui.jsx";
 import Jornada from "./decisor/Jornada.jsx";
+import Usuarios from "./admin/Usuarios.jsx";
 
 export default function App() {
   const [carregando, setCarregando] = useState(true);
@@ -200,7 +201,13 @@ export default function App() {
             {tela === "casos" ? "Meus casos" : "‹ Voltar"}
           </button>
           <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
-            {tela === "painel" ? "Painel" : tela === "jornada" ? "Novo caso" : "O Decisor"}
+            {tela === "painel"
+              ? "Painel"
+              : tela === "usuarios"
+              ? "Usuários"
+              : tela === "jornada"
+              ? "Novo caso"
+              : "O Decisor"}
           </div>
           <button
             onClick={() => (ehGestao ? setTela(tela === "painel" ? "casos" : "painel") : sair())}
@@ -211,7 +218,9 @@ export default function App() {
         </div>
       </div>
 
-      {tela === "jornada" ? (
+      {tela === "usuarios" ? (
+        <Usuarios onVoltar={() => setTela("painel")} />
+      ) : tela === "jornada" ? (
         <Jornada
           perfil={perfil}
           clientes={clientes}
@@ -287,6 +296,17 @@ export default function App() {
                   <Metrica rotulo="Abertas" valor={metricas.abertas} cor="var(--blue)" />
                   <Metrica rotulo="Expirados" valor={metricas.expirados} cor="var(--label3)" />
                 </div>
+              )}
+
+              {perfil.papel === "admin" && (
+                <Group header="Administração">
+                  <Row last onClick={() => setTela("usuarios")}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 17, color: "var(--blue)" }}>Usuários e acessos</span>
+                      <span style={{ color: "#C7C7CC", fontSize: 20 }}>›</span>
+                    </div>
+                  </Row>
+                </Group>
               )}
 
               <Group
@@ -395,7 +415,7 @@ export default function App() {
         </main>
       )}
 
-      {tela !== "jornada" && (
+      {tela !== "jornada" && tela !== "usuarios" && (
         <BarraAcao>
           <Pill onClick={() => setTela("jornada")}>Relatar um problema</Pill>
         </BarraAcao>
